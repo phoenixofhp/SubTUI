@@ -49,10 +49,11 @@ type Security struct {
 }
 
 type App struct {
-	ReplayGain    string `toml:"replaygain" comment:"Type of replaygain: 'track', 'album', 'no'"`
-	Notifications bool   `toml:"desktop_notifications"`
-	DiscordRPC    bool   `toml:"discord_rich_presence"`
-	MouseSupport  bool   `toml:"mouse_support"`
+	ReplayGain      string `toml:"replaygain" comment:"Type of replaygain: 'track', 'album', 'no' https://mpv.io/manual/stable/#options-replaygain"`
+	GaplessPlayBack string `toml:"gapless_playback" comment:"Type of gapless playback: 'yes', 'no', 'weak' https://mpv.io/manual/stable/#options-gapless-audio"`
+	Notifications   bool   `toml:"desktop_notifications"`
+	DiscordRPC      bool   `toml:"discord_rich_presence"`
+	MouseSupport    bool   `toml:"mouse_support"`
 }
 
 type Theme struct {

@@ -44,11 +44,16 @@ func InitPlayer() error {
 		replayGain = "no"
 	}
 
+	gaplessPlayback := strings.ToLower(api.AppConfig.App.GaplessPlayBack)
+	if gaplessPlayback != "no" && gaplessPlayback != "weak" {
+		gaplessPlayback = "yes"
+	}
+
 	args := []string{
 		"--idle",
 		"--no-video",
 		"--input-ipc-server=" + socketPath,
-		"--gapless-audio=yes",
+		"--gapless-audio=" + gaplessPlayback,
 		"--prefetch-playlist=yes",
 		"--replaygain=" + replayGain,
 	}
