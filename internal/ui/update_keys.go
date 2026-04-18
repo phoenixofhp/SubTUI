@@ -1533,7 +1533,7 @@ func ratingMenu(key string, m model) (model, tea.Cmd) {
 				m.songs[m.cursorMain].Rating = m.cursorPopup
 				cmd = addRatingCmd(m.songs[m.cursorMain].ID, m.cursorPopup)
 			case viewQueue:
-				m.songs[m.cursorMain].Rating = m.cursorPopup
+				m.queue[m.cursorMain].Rating = m.cursorPopup
 				cmd = addRatingCmd(m.queue[m.cursorMain].ID, m.cursorPopup)
 			}
 		case displayAlbums:
