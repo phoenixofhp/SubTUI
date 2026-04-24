@@ -774,7 +774,7 @@ func displayArtistFromSelected(m model) (tea.Model, tea.Cmd) {
 			if m.viewMode == viewList && len(m.songs) > 0 {
 				id = m.songs[m.cursorMain].ArtistID // artist id of selected songs
 			} else if m.viewMode == viewQueue && len(m.queue) > 0 {
-				id = m.songs[m.queueIndex].ArtistID // artist id of queued song
+				id = m.queue[m.queueIndex].ArtistID // artist id of queued song
 			}
 
 		case displayAlbums:
