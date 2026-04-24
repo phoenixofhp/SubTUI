@@ -139,9 +139,15 @@ func getSelectedSongs(m model) []api.Song {
 
 			case displayAlbums:
 				var songs []api.Song
-
-				for i := range m.selectionMap {
-					albumSongs, err := api.SubsonicGetAlbum(m.albums[i].ID)
+				if m.showSelection { // Add selection
+					for i := range m.selectionMap {
+						albumSongs, err := api.SubsonicGetAlbum(m.albums[i].ID)
+						if err == nil {
+							songs = append(songs, albumSongs...)
+						}
+					}
+				} else { // Add single song
+					albumSongs, err := api.SubsonicGetAlbum(m.albums[m.cursorMain].ID)
 					if err == nil {
 						songs = append(songs, albumSongs...)
 					}

@@ -920,23 +920,32 @@ func mediaVolumeDown(m model, _ tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func mediaQueueNext(m model) model {
-	if m.focus == focusMain && (m.displayMode == displaySongs || m.displayMode == displayAlbums) {
-		selectedSongs := getSelectedSongs(m)
+	// Continue when main focus
+	if m.focus != focusMain {
+		return m
+	}
 
-		if selectedSongs != nil {
-			if len(m.queue) == 0 { // Create a new queue
-				m.queue = selectedSongs
-				m.queueIndex = 0
-			} else { // Add to current queue
-				insertAt := m.queueIndex + 1
-				tail := append([]api.Song{}, m.queue[insertAt:]...)
-				m.queue = append(m.queue[:insertAt], append(selectedSongs, tail...)...)
-			}
+	// Continue on songs and albums
+	if m.displayMode == displayArtist {
+		return m
+	}
 
-			if m.viewMode == viewQueue && m.cursorMain > m.queueIndex {
-				m.cursorMain++
-			}
-		}
+	selectedSongs := getSelectedSongs(m)
+	if len(selectedSongs) == 0 {
+		return m
+	}
+
+	if len(m.queue) == 0 { // Create a new queue
+		m.queue = selectedSongs
+		m.queueIndex = 0
+	} else { // Add to current queue
+		insertAt := m.queueIndex + 1
+		tail := append([]api.Song{}, m.queue[insertAt:]...)
+		m.queue = append(m.queue[:insertAt], append(selectedSongs, tail...)...)
+	}
+
+	if m.viewMode == viewQueue && m.cursorMain > m.queueIndex {
+		m.cursorMain++
 	}
 
 	// Sync MPV's Queue
@@ -946,14 +955,23 @@ func mediaQueueNext(m model) model {
 }
 
 func mediaQueueLast(m model) model {
-	if m.focus == focusMain && (m.displayMode == displaySongs || m.displayMode == displayAlbums) {
-		selectedSongs := getSelectedSongs(m)
-
-		if selectedSongs != nil {
-			m.queue = append(m.queue, selectedSongs...)
-		}
-
+	// Continue when main focus
+	if m.focus != focusMain {
+		return m
 	}
+
+	// Continue on songs and albums
+	if m.displayMode == displayArtist {
+		return m
+	}
+
+	selectedSongs := getSelectedSongs(m)
+	if len(selectedSongs) == 0 {
+		return m
+	}
+
+	// Set new queue
+	m.queue = append(m.queue, selectedSongs...)
 
 	// Sync MPV's Queue
 	m.syncNextSong()
@@ -1021,6 +1039,7 @@ func mediaDeleteSongFromQueue(m model) model {
 
 	return m
 }
+
 func mediaClearQueue(m model) model {
 	if m.focus == focusMain {
 		m.queue = nil
