@@ -374,6 +374,9 @@ func (m model) handleStatus(msg statusMsg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, getLyricsCmd(currentSong.ID))
 		m.songLinesOffset = 0
 
+		// Warm the caches for the next track while this one plays.
+		cmds = append(cmds, m.prefetchNextTrackCmd())
+
 		windowTitle := fmt.Sprintf("%s - %s", metadata.Title, metadata.Artist)
 		cmds = append(cmds, tea.SetWindowTitle(windowTitle)) // Update windows title
 		cmds = append(cmds, m.savePlayQueue())               // Server queue update

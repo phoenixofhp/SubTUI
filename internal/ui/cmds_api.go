@@ -335,3 +335,32 @@ func fetchLyrics(ID string) tea.Msg {
 
 	return getLyricsMsg{result}
 }
+
+// prefetchLyricsCmd fetches lyrics ahead of time for the track that is queued
+// next and stores them in the cache. Nothing is displayed.
+func prefetchLyricsCmd(ID string) tea.Cmd {
+	return func() tea.Msg {
+		// Without the cache the lyrics would be downloaded and thrown away.
+		if ID == "" || !api.AppConfig.Cache.Lyrics.Enabled {
+			return nil
+		}
+
+		_, _ = getLyricsCache().Get(ID)
+
+		return nil
+	}
+}
+
+// prefetchCoverArtCmd downloads the artwork of the next track into the cache
+// without touching what is on screen.
+func prefetchCoverArtCmd(coverArtID string) tea.Cmd {
+	return func() tea.Msg {
+		if coverArtID == "" {
+			return nil
+		}
+
+		_, _ = getCoverArtCache().Get(coverArtID)
+
+		return nil
+	}
+}
