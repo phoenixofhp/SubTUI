@@ -1,15 +1,13 @@
 package ui
 
 import (
-	"bytes"
-	"image"
-	_ "image/jpeg"
-	_ "image/png"
+	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/MattiaPun/SubTUI/v2/internal/api"
+	"github.com/MattiaPun/SubTUI/v2/internal/covercache"
 	tea "github.com/charmbracelet/bubbletea"
-	_ "golang.org/x/image/webp"
 )
 
 func attemptLoginCmd() tea.Cmd {
@@ -142,14 +140,35 @@ func toggleStarCmd(idsToStar []string, idsToUnstar []string) tea.Cmd {
 	}
 }
 
-func getCoverArtCmd(songID string) tea.Cmd {
-	return func() tea.Msg {
-		imgData, err := api.SubsonicCoverArt(songID, 500)
+// coverArtSize is the artwork resolution requested from the server. It is
+// rendered at varying terminal sizes, so it is fetched large once and cached.
+const coverArtSize = 500
+
+var (
+	coverCacheOnce sync.Once
+	coverCache     *covercache.Cache
+)
+
+// getCoverArtCache lazily creates the shared artwork cache. Originals live in
+// the user cache directory so restarting SubTUI does not refetch them.
+func getCoverArtCache() *covercache.Cache {
+	coverCacheOnce.Do(func() {
+		dir, err := os.UserCacheDir()
 		if err != nil {
-			return nil
+			dir = os.TempDir()
 		}
 
-		img, _, err := image.Decode(bytes.NewReader(imgData))
+		coverCache = covercache.New(filepath.Join(dir, "subtui", "covers"), func(id string) ([]byte, error) {
+			return api.SubsonicCoverArt(id, coverArtSize)
+		})
+	})
+
+	return coverCache
+}
+
+func getCoverArtCmd(coverArtID string) tea.Cmd {
+	return func() tea.Msg {
+		img, err := getCoverArtCache().Get(coverArtID)
 		if err != nil {
 			return nil
 		}

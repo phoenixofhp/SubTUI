@@ -367,7 +367,7 @@ func (m model) handleStatus(msg statusMsg) (tea.Model, tea.Cmd) {
 
 		// Album Art Update
 		if api.AppConfig.Theme.DisplayAlbumArt {
-			cmds = append(cmds, getCoverArtCmd(currentSong.ID))
+			cmds = append(cmds, getCoverArtCmd(currentSong.CoverArtID()))
 		}
 
 		// Lyrics Update/reset
