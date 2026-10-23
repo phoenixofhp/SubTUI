@@ -57,14 +57,38 @@ type Cache struct {
 
 // New creates a cache storing artwork in dir. Directories are created on the
 // first write; a missing or unwritable directory only disables the disk layer.
-func New(dir string, fetch Fetcher) *Cache {
-	return &Cache{
+func New(dir string, fetch Fetcher, opts ...Option) *Cache {
+	c := &Cache{
 		dir:      dir,
 		fetch:    fetch,
 		maxDisk:  maxDiskBytes,
 		maxItems: maxMemoryItems,
 		order:    list.New(),
 		items:    make(map[string]*list.Element),
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
+}
+
+// Option customises a Cache.
+type Option func(*Cache)
+
+// WithMaxDiskBytes bounds the original artwork files kept on disk. A value of
+// zero or less keeps the cache in memory only.
+func WithMaxDiskBytes(bytes int64) Option {
+	return func(c *Cache) {
+		c.maxDisk = bytes
+	}
+}
+
+// WithMaxMemoryItems bounds the decoded images kept in memory.
+func WithMaxMemoryItems(items int) Option {
+	return func(c *Cache) {
+		c.maxItems = items
 	}
 }
 
@@ -122,6 +146,7 @@ func decode(data []byte) (image.Image, error) {
 // path derives a filesystem safe file name from the artwork id.
 func (c *Cache) path(id string) string {
 	sum := sha256.Sum256([]byte(id))
+
 	return filepath.Join(c.dir, hex.EncodeToString(sum[:16])+fileExt)
 }
 
@@ -167,6 +192,10 @@ func (c *Cache) toMemory(id string, img image.Image) {
 // write stores the original bytes, ignoring failures: the disk layer is an
 // optimisation and must never break playback.
 func (c *Cache) write(id string, data []byte) {
+	if c.maxDisk <= 0 || c.dir == "" {
+		return
+	}
+
 	if err := os.MkdirAll(c.dir, 0o755); err != nil {
 		return
 	}

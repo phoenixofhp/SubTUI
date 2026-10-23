@@ -1,6 +1,10 @@
 package ui
 
 import (
+	"bytes"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"os"
 	"path/filepath"
 	"sync"
@@ -8,6 +12,7 @@ import (
 	"github.com/MattiaPun/SubTUI/v2/internal/api"
 	"github.com/MattiaPun/SubTUI/v2/internal/covercache"
 	tea "github.com/charmbracelet/bubbletea"
+	_ "golang.org/x/image/webp"
 )
 
 func attemptLoginCmd() tea.Cmd {
@@ -149,18 +154,28 @@ var (
 	coverCache     *covercache.Cache
 )
 
-// getCoverArtCache lazily creates the shared artwork cache. Originals live in
-// the user cache directory so restarting SubTUI does not refetch them.
+// getCoverArtCache lazily creates the shared artwork cache from the settings in
+// the [cache.cover_art] section.
 func getCoverArtCache() *covercache.Cache {
 	coverCacheOnce.Do(func() {
-		dir, err := os.UserCacheDir()
-		if err != nil {
-			dir = os.TempDir()
+		settings := api.AppConfig.Cache.CoverArt
+
+		dir := settings.Dir
+		if dir == "" {
+			userCacheDir, err := os.UserCacheDir()
+			if err != nil {
+				userCacheDir = os.TempDir()
+			}
+			dir = filepath.Join(userCacheDir, "subtui", "covers")
 		}
 
-		coverCache = covercache.New(filepath.Join(dir, "subtui", "covers"), func(id string) ([]byte, error) {
-			return api.SubsonicCoverArt(id, coverArtSize)
-		})
+		coverCache = covercache.New(
+			filepath.Join(dir),
+			func(id string) ([]byte, error) {
+				return api.SubsonicCoverArt(id, coverArtSize)
+			},
+			covercache.WithMaxDiskBytes(int64(settings.MaxSizeMB)<<20),
+		)
 	})
 
 	return coverCache
@@ -168,6 +183,10 @@ func getCoverArtCache() *covercache.Cache {
 
 func getCoverArtCmd(coverArtID string) tea.Cmd {
 	return func() tea.Msg {
+		if !api.AppConfig.Cache.CoverArt.Enabled {
+			return fetchCoverArt(coverArtID)
+		}
+
 		img, err := getCoverArtCache().Get(coverArtID)
 		if err != nil {
 			return nil
@@ -177,6 +196,21 @@ func getCoverArtCmd(coverArtID string) tea.Cmd {
 			img: img,
 		}
 	}
+}
+
+// fetchCoverArt downloads and decodes artwork without touching the cache.
+func fetchCoverArt(coverArtID string) tea.Msg {
+	imgData, err := api.SubsonicCoverArt(coverArtID, coverArtSize)
+	if err != nil {
+		return nil
+	}
+
+	img, _, err := image.Decode(bytes.NewReader(imgData))
+	if err != nil {
+		return nil
+	}
+
+	return coverArtMsg{img: img}
 }
 
 func getPlayQueue() tea.Cmd {
