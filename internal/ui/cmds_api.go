@@ -11,6 +11,7 @@ import (
 
 	"github.com/MattiaPun/SubTUI/v2/internal/api"
 	"github.com/MattiaPun/SubTUI/v2/internal/covercache"
+	"github.com/MattiaPun/SubTUI/v2/internal/lyricscache"
 	tea "github.com/charmbracelet/bubbletea"
 	_ "golang.org/x/image/webp"
 )
@@ -213,6 +214,38 @@ func fetchCoverArt(coverArtID string) tea.Msg {
 	return coverArtMsg{img: img}
 }
 
+var (
+	lyricsCacheOnce sync.Once
+	lyricsCache     *lyricscache.Cache
+)
+
+// getLyricsCache lazily creates the shared lyrics cache from the settings in
+// the [cache.lyrics] section.
+func getLyricsCache() *lyricscache.Cache {
+	lyricsCacheOnce.Do(func() {
+		settings := api.AppConfig.Cache.Lyrics
+
+		dir := settings.Dir
+		if dir == "" {
+			userCacheDir, err := os.UserCacheDir()
+			if err != nil {
+				userCacheDir = os.TempDir()
+			}
+			dir = filepath.Join(userCacheDir, "subtui", "lyrics")
+		}
+
+		lyricsCache = lyricscache.New(
+			lyricscache.Config{
+				Dir:          dir,
+				MaxDiskBytes: int64(settings.MaxSizeMB) << 20,
+			},
+			api.SubsonicGetLyrics,
+		)
+	})
+
+	return lyricsCache
+}
+
 func getPlayQueue() tea.Cmd {
 	return func() tea.Msg {
 		result, err := api.SubsonicGetQueue()
@@ -276,15 +309,29 @@ func createMediaShareCmd(ids []string) tea.Cmd {
 
 func getLyricsCmd(ID string) tea.Cmd {
 	return func() tea.Msg {
-		if ID != "" {
-			result, err := api.SubsonicGetLyrics(ID)
-
-			if err != nil {
-				return errMsg{err}
-			}
-			return getLyricsMsg{result}
+		if ID == "" {
+			return nil
 		}
 
-		return nil
+		if !api.AppConfig.Cache.Lyrics.Enabled {
+			return fetchLyrics(ID)
+		}
+
+		result, err := getLyricsCache().Get(ID)
+		if err != nil {
+			return errMsg{err}
+		}
+
+		return getLyricsMsg{result}
 	}
+}
+
+// fetchLyrics requests lyrics without touching the cache.
+func fetchLyrics(ID string) tea.Msg {
+	result, err := api.SubsonicGetLyrics(ID)
+	if err != nil {
+		return errMsg{err}
+	}
+
+	return getLyricsMsg{result}
 }

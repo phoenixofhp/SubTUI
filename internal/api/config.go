@@ -68,12 +68,19 @@ type Theme struct {
 
 type Cache struct {
 	CoverArt CacheCoverArt `toml:"cover_art"`
+	Lyrics   CacheLyrics   `toml:"lyrics"`
 }
 
 type CacheCoverArt struct {
 	Enabled   bool   `toml:"enabled"`
 	Dir       string `toml:"dir" comment:"Empty uses the user cache directory"`
 	MaxSizeMB int    `toml:"max_size_mb" comment:"Upper bound for cached cover art on disk, 0 disables the disk cache"`
+}
+
+type CacheLyrics struct {
+	Enabled   bool   `toml:"enabled"`
+	Dir       string `toml:"dir" comment:"Empty uses the user cache directory"`
+	MaxSizeMB int    `toml:"max_size_mb" comment:"Upper bound for cached lyrics on disk, 0 disables the disk cache"`
 }
 
 type Filters struct {
